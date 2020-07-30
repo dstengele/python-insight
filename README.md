@@ -5,10 +5,10 @@ This is a API client to access data in the Jira app [Insight](https://marketplac
 ## Usage
 
 ```python
-from jira-insight import Insight, InsightObjectSchema
+from jira_insight.Insight import *
 
 # Initialize the main Insight object with the URL and credentials for Basic Auth
-insight = Insight("https://jira.example.com", (USERNAME, PASSWORD))
+insight = Insight("https://jira.example.com", ("USERNAME", "PASSWORD"))
 # Get a specific object schema by ID
 object_schema = InsightObjectSchema(insight, 1)
 # Search for objects by IQL
