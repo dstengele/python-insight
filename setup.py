@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="jira-insight",  # Replace with your own username
-    version="0.0.1",
+    name="jira_insight",
+    version="0.1.0",
     author="Dennis Stengele",
     author_email="dennis@stengele.me",
     description="API client for the Insight app for Jira",
