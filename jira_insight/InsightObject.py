@@ -1,5 +1,5 @@
 from lazy import lazy
-from InsightObjectAttribute import InsightObjectAttribute
+from .InsightObjectAttribute import InsightObjectAttribute
 
 
 class InsightObject(object):

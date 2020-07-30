@@ -4,7 +4,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 import logging
 
-from InsightObjectSchema import InsightObjectSchema
+from .InsightObjectSchema import InsightObjectSchema
 
 
 class Insight(object):

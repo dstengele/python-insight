@@ -1,7 +1,7 @@
 import logging
 
-from InsightObjectSchema import InsightObjectSchema
-from InsightObject import InsightObject
+from .InsightObjectSchema import InsightObjectSchema
+from .InsightObject import InsightObject
 
 
 class InsightObjectType(object):

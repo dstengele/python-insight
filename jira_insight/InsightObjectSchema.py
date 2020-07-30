@@ -2,9 +2,9 @@ import logging
 
 from lazy import lazy
 
-from InsightObject import InsightObject
-from InsightObjectType import InsightObjectType
-from InsightObjectTypeAttribute import InsightObjectTypeAttribute
+from .InsightObject import InsightObject
+from .InsightObjectType import InsightObjectType
+from .InsightObjectTypeAttribute import InsightObjectTypeAttribute
 
 
 class InsightObjectSchema(object):

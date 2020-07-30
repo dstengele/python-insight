@@ -1,7 +1,7 @@
 from lazy import lazy
 import datetime
 
-from InsightObject import InsightObject
+from .InsightObject import InsightObject
 
 
 class InsightObjectAttribute(object):
