@@ -7,7 +7,7 @@ from urllib3 import Retry
 import logging
 
 
-class Insight(object):
+class Insight:
     def __init__(self, jira_url, auth, params=None):
         retries = 3
         backoff_factor = 0.3
@@ -31,15 +31,10 @@ class Insight(object):
         self.retry_session.auth = self.auth
         self.retry_session.params = params
 
-    def __str__(self):
-        return f"Insight: {self.jira_url}"
-
-    @lazy
-    def object_schemas(self):
         api_path = "/objectschema/list"
         object_schemas_json_request = self.do_api_request(api_path)
         object_schemas_json = object_schemas_json_request.get("objectschemas", {})
-        object_schemas = {}
+        self.object_schemas = {}
         logging.info("Loading object schemas")
         object_schemas_count = len(object_schemas_json)
         index = 1
@@ -48,71 +43,58 @@ class Insight(object):
                 f'Loading object schema {object_schema_json["name"]} ({index}/{object_schemas_count})'
             )
             object_schema_id = object_schema_json["id"]
-            object_schemas[object_schema_id] = InsightObjectSchema(
+            self.object_schemas[object_schema_id] = InsightObjectSchema(
                 self, object_schema_id
             )
             index += 1
 
-        return object_schemas
+    def __str__(self):
+        return f"Insight: {self.jira_url}"
 
     def do_api_request(self, path, method="get", json=None, params=None):
         if method == "get":
             request = self.retry_session.get(self.insight_api_url + path, params=params)
             request.raise_for_status()
             return request.json()
-        elif method == "post":
+        if method == "post":
             request = self.retry_session.post(
                 self.insight_api_url + path, json=json, params=params
             )
             request.raise_for_status()
             return request.json()
-        elif method == "head":
+        if method == "head":
             request = self.retry_session.head(
                 self.insight_api_url + path, params=params
             )
             request.raise_for_status()
             return request.json()
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
 
-class InsightObject(object):
-    def __init__(self, insight, object_schema, object_id):
+class InsightObject:
+    def __init__(self, insight, object_id):
         self.insight = insight
         self.id = object_id
-
-    def __str__(self):
-        return f"InsightObject: {self.name}"
-
-    @lazy
-    def object_schema(self):
-        return self.insight.object_schemas[
+        self.object_json = self.insight.do_api_request(f"/object/{self.id}")
+        self.name = self.object_json["label"]
+        self.object_schema = self.insight.object_schemas[
             self.object_json["objectType"]["objectSchemaId"]
         ]
 
-    @lazy
-    def name(self):
-        return self.object_json["label"]
-
-    @lazy
-    def object_json(self):
-        return self.insight.do_api_request(f"/object/{self.id}")
-
-    @lazy
-    def attributes(self):
-        attributes = {}
-
+        self.attributes = {}
         for attribute_json in self.object_json["attributes"]:
             attribute_object = InsightObjectAttribute(
                 self,
                 attribute_json["objectTypeAttributeId"],
                 attribute_json["objectAttributeValues"],
             )
-            attributes[attribute_object.name] = attribute_object
-        return attributes
+            self.attributes[attribute_object.name] = attribute_object
+
+    def __str__(self):
+        return f"InsightObject: {self.name}"
 
 
-class InsightObjectAttribute(object):
+class InsightObjectAttribute:
     def __init__(self, insight_object, attribute_id, values_json=None):
         self.insight_object = insight_object
         self.id = attribute_id
@@ -139,43 +121,38 @@ class InsightObjectAttribute(object):
                     value.append(value_json.get("value", None))
                     continue
                 if self.object_type_attribute.attribute_type == "Object":
-                    insight_object = InsightObject(
-                        self.insight_object.insight,
-                        self.insight_object.object_schema,
-                        value_json["referencedObject"]["id"],
-                    )
+                    insight_object = InsightObject(self.insight_object.insight, value_json["referencedObject"]["id"])
                     value.append(insight_object)
                     continue
             return value
-        else:
-            value_json = self.values_json[0]
-            if self.object_type_attribute.attribute_type in [
-                "Text",
-                "URL",
-                "Email",
-                "Textarea",
-            ]:
-                return value_json.get("value", None)
-            if self.object_type_attribute.attribute_type == "Integer":
-                return int(value_json.get("value", None))
-            if self.object_type_attribute.attribute_type == "Double":
-                return float(value_json.get("value", None))
-            if self.object_type_attribute.attribute_type == "Boolean":
-                return value_json.get("value", "false") == "true"
-            if self.object_type_attribute.attribute_type == "Date":
-                return datetime.datetime.strptime(
-                    value_json.get("value", None), "%d.%m.%Y"
-                ).date()
-            if self.object_type_attribute.attribute_type == "Date Time":
-                return datetime.datetime.strptime(
-                    value_json.get("value", None), "%d.%m.%Y %H:%M"
-                )
+        value_json = self.values_json[0]
+        if self.object_type_attribute.attribute_type in [
+            "Text",
+            "URL",
+            "Email",
+            "Textarea",
+        ]:
+            return value_json.get("value", None)
+        if self.object_type_attribute.attribute_type == "Integer":
+            return int(value_json.get("value", None))
+        if self.object_type_attribute.attribute_type == "Double":
+            return float(value_json.get("value", None))
+        if self.object_type_attribute.attribute_type == "Boolean":
+            return value_json.get("value", "false") == "true"
+        if self.object_type_attribute.attribute_type == "Date":
+            return datetime.datetime.strptime(
+                value_json.get("value", None), "%d.%m.%Y"
+            ).date()
+        if self.object_type_attribute.attribute_type == "Date Time":
+            return datetime.datetime.strptime(
+                value_json.get("value", None), "%d.%m.%Y %H:%M"
+            )
 
     def __str__(self):
         return f"InsightObjectAttribute: {self.name}, Value: {self.value}"
 
 
-class InsightObjectSchema(object):
+class InsightObjectSchema:
     def __init__(self, insight, insight_id):
         self.insight = insight
         self.id = insight_id
@@ -184,29 +161,23 @@ class InsightObjectSchema(object):
         self.key = object_schema_json.get("objectSchemaKey", None)
         self.description = object_schema_json.get("description", None)
 
-    @lazy
-    def object_types(self):
         object_types_json = self.insight.do_api_request(
             f"/objectschema/{self.id}/objecttypes/flat"
         )
-        object_types = {}
+        self.object_types = {}
         for object_type in object_types_json:
-            object_types[object_type["id"]] = InsightObjectType(
-                self.insight, object_type["id"]
+            self.object_types[object_type["id"]] = InsightObjectType(
+                self.insight, object_type["id"], object_type
             )
-        return object_types
 
-    @lazy
-    def object_type_attributes(self):
         object_type_attributes_json = self.insight.do_api_request(
             f"/objectschema/{self.id}/attributes"
         )
-        object_type_attributes = {}
+        self.object_type_attributes = {}
         for object_type_attribute_json in object_type_attributes_json:
             self.object_type_attributes[
                 object_type_attribute_json["id"]
             ] = InsightObjectTypeAttribute(self, object_type_attribute_json)
-        return object_type_attributes
 
     def __str__(self):
         return f"InsightObjectSchema: {self.name} ({self.key})"
@@ -234,7 +205,7 @@ class InsightObjectSchema(object):
 
         objects_result = []
         for json_object in objects_json:
-            object_to_add = InsightObject(self.insight, self, json_object["id"])
+            object_to_add = InsightObject(self.insight, json_object["id"])
             objects_result.append(object_to_add)
 
         return objects_result
@@ -246,20 +217,20 @@ class InsightObjectSchema(object):
         )
 
 
-class InsightObjectType(object):
-    def __init__(self, insight, insight_id):
+class InsightObjectType:
+    def __init__(self, insight, insight_id, object_type_json=None):
         self.insight = insight
         self.id = insight_id
         logging.info(f"Loading Insight object type with ID {insight_id}")
-        object_type_json = self.insight.do_api_request(f"/objecttype/{insight_id}")
+        if not object_type_json:
+            object_type_json = self.insight.do_api_request(f"/objecttype/{insight_id}")
         self.name = object_type_json.get("name", None)
-        self.description = object_type_json.get("description", None)
         self.object_schema_id = object_type_json.get("objectSchemaId", None)
 
     def __str__(self):
         return f"InsightObjectType: {self.name}"
 
-    def create_object(self, name, attributes: dict):
+    def create_object(self, attributes: dict):
         attributes_json = []
         for attribute_id, value in attributes.items():
             entry = {
@@ -273,11 +244,11 @@ class InsightObjectType(object):
         )
         object_id = response["id"]
         object_schema = InsightObjectSchema(self.insight, self.object_schema_id)
-        created_object = InsightObject(self.insight, object_schema, object_id)
+        created_object = InsightObject(self.insight, object_id)
         return created_object
 
 
-class InsightObjectTypeAttribute(object):
+class InsightObjectTypeAttribute:
     def __init__(self, object_schema, object_type_attribute_json):
         self.insight = object_schema.insight
         self.object_schema = object_schema
