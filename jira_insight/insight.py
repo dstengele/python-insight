@@ -121,32 +121,39 @@ class InsightObjectAttribute:
                     value.append(value_json.get("value", None))
                     continue
                 if self.object_type_attribute.attribute_type == "Object":
-                    insight_object = InsightObject(self.insight_object.insight, value_json["referencedObject"]["id"])
+                    insight_object = InsightObject(
+                        self.insight_object.insight,
+                        self.insight_object.object_schema,
+                        value_json["referencedObject"]["id"],
+                    )
                     value.append(insight_object)
                     continue
             return value
-        value_json = self.values_json[0]
-        if self.object_type_attribute.attribute_type in [
-            "Text",
-            "URL",
-            "Email",
-            "Textarea",
-        ]:
-            return value_json.get("value", None)
-        if self.object_type_attribute.attribute_type == "Integer":
-            return int(value_json.get("value", None))
-        if self.object_type_attribute.attribute_type == "Double":
-            return float(value_json.get("value", None))
-        if self.object_type_attribute.attribute_type == "Boolean":
-            return value_json.get("value", "false") == "true"
-        if self.object_type_attribute.attribute_type == "Date":
-            return datetime.datetime.strptime(
-                value_json.get("value", None), "%d.%m.%Y"
-            ).date()
-        if self.object_type_attribute.attribute_type == "Date Time":
-            return datetime.datetime.strptime(
-                value_json.get("value", None), "%d.%m.%Y %H:%M"
-            )
+        else:
+            value_json = self.values_json[0]
+            if self.object_type_attribute.attribute_type in [
+                "Text",
+                "URL",
+                "Email",
+                "Textarea",
+            ]:
+                return value_json.get("value", None)
+            if self.object_type_attribute.attribute_type == "Status":
+                return value_json.get("status", None)
+            if self.object_type_attribute.attribute_type == "Integer":
+                return int(value_json.get("value", None))
+            if self.object_type_attribute.attribute_type == "Double":
+                return float(value_json.get("value", None))
+            if self.object_type_attribute.attribute_type == "Boolean":
+                return value_json.get("value", "false") == "true"
+            if self.object_type_attribute.attribute_type == "Date":
+                return datetime.datetime.strptime(
+                    value_json.get("value", None), "%d.%m.%Y"
+                ).date()
+            if self.object_type_attribute.attribute_type == "Date Time":
+                return datetime.datetime.strptime(
+                    value_json.get("value", None), "%d.%m.%Y %H:%M"
+                )
 
     def __str__(self):
         return f"InsightObjectAttribute: {self.name}, Value: {self.value}"
