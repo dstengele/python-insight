@@ -5,7 +5,7 @@ This is a API client to access data in the Jira app [Insight](https://marketplac
 ## Usage
 
 ```python
-from jira_insight.insight import *
+from jira_insight import *
 
 # Initialize the main Insight object with the URL and credentials for Basic Auth
 insight = Insight("https://jira.example.com", ("USERNAME", "PASSWORD"))
