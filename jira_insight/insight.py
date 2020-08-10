@@ -123,7 +123,6 @@ class InsightObjectAttribute:
                 if self.object_type_attribute.attribute_type == "Object":
                     insight_object = InsightObject(
                         self.insight_object.insight,
-                        self.insight_object.object_schema,
                         value_json["referencedObject"]["id"],
                     )
                     value.append(insight_object)
@@ -250,7 +249,6 @@ class InsightObjectType:
             "/object/create", method="post", json=request_body
         )
         object_id = response["id"]
-        object_schema = InsightObjectSchema(self.insight, self.object_schema_id)
         created_object = InsightObject(self.insight, object_id)
         return created_object
 
