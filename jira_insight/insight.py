@@ -72,10 +72,12 @@ class Insight:
 
 
 class InsightObject:
-    def __init__(self, insight, object_id):
+    def __init__(self, insight, object_id, object_json=None):
         self.insight = insight
         self.id = object_id
-        self.object_json = self.insight.do_api_request(f"/object/{self.id}")
+        self.object_json = object_json
+        if not self.object_json:
+            self.object_json = self.insight.do_api_request(f"/object/{self.id}")
         self.name = self.object_json["label"]
         self.object_schema = self.insight.object_schemas[
             self.object_json["objectType"]["objectSchemaId"]
@@ -190,7 +192,7 @@ class InsightObjectSchema:
 
     def search_iql(self, iql=None):
         api_path = "/iql/objects"
-        params = {"objectSchemaId": self.id, "resultPerPage": 500}
+        params = {"objectSchemaId": self.id, "resultPerPage": 500, "includeTypeAttributes": "true"}
         if iql is not None:
             params["iql"] = iql
         search_request = self.insight.do_api_request(api_path, params=params)
@@ -199,7 +201,7 @@ class InsightObjectSchema:
         if not objects_json:
             return []
 
-        # Get additional pages if neccessary
+        # Get additional pages if necessary
         if search_results["pageSize"] > 1:
             for page_number in range(2, search_results["pageSize"] + 1):
                 params["page"] = page_number
@@ -211,7 +213,7 @@ class InsightObjectSchema:
 
         objects_result = []
         for json_object in objects_json:
-            object_to_add = InsightObject(self.insight, json_object["id"])
+            object_to_add = InsightObject(self.insight, json_object["id"], json_object)
             objects_result.append(object_to_add)
 
         return objects_result
