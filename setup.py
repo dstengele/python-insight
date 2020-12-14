@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="jira_insight",
-    version="0.1.8",
+    version="0.2.2",
     author="Dennis Stengele",
     author_email="dennis@stengele.me",
     description="API client for the Insight app for Jira",
