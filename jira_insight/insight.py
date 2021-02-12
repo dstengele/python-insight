@@ -277,6 +277,7 @@ class InsightObjectTypeAttribute:
                 8: "Email",
                 9: "Textarea",
                 10: "Select",
+                11: "IP Address"
             },
             1: "Object",
             2: "User",
