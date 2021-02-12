@@ -62,6 +62,12 @@ class Insight:
             )
             request.raise_for_status()
             return request.json()
+        if method == "put":
+            request = self.retry_session.put(
+                self.insight_api_url + path, json=json, params=params
+            )
+            request.raise_for_status()
+            return request.json()
         if method == "head":
             request = self.retry_session.head(
                 self.insight_api_url + path, params=params
@@ -91,6 +97,21 @@ class InsightObject:
                 attribute_json["objectAttributeValues"],
             )
             self.attributes[attribute_object.name] = attribute_object
+
+    def update_object(self, attributes: dict):
+        attributes_json = []
+        for attribute_id, value in attributes.items():
+            entry = {
+                "objectTypeAttributeId": attribute_id,
+                "objectAttributeValues": [{"value": value}],
+            }
+            attributes_json.append(entry)
+        request_body = {"attributes": attributes_json}
+        response = self.insight.do_api_request(
+            "/object/{}".format(self.id), method="put", json=request_body
+        )
+
+        return response
 
     def __str__(self):
         return f"InsightObject: {self.name}"
