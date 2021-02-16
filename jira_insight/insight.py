@@ -102,8 +102,9 @@ class InsightObject:
         attributes_json = []
         for attribute_id, value in attributes.items():
             entry = {
+                "objectTypeId": self.object_json['objectType']['id'],
                 "objectTypeAttributeId": attribute_id,
-                "objectAttributeValues": [{"value": value}],
+                "objectAttributeValues": [{"value": value}]
             }
             attributes_json.append(entry)
         request_body = {"attributes": attributes_json}
@@ -298,6 +299,7 @@ class InsightObjectTypeAttribute:
                 8: "Email",
                 9: "Textarea",
                 10: "Select",
+                11: "IP Address"
             },
             1: "Object",
             2: "User",
