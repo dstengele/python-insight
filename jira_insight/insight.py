@@ -102,12 +102,14 @@ class InsightObject:
         attributes_json = []
         for attribute_id, value in attributes.items():
             entry = {
-                "objectTypeId": self.object_json['objectType']['id'],
                 "objectTypeAttributeId": attribute_id,
                 "objectAttributeValues": [{"value": value}]
             }
             attributes_json.append(entry)
-        request_body = {"attributes": attributes_json}
+        request_body = {
+            "objectTypeId": self.object_json['objectType']['id'],
+            "attributes": attributes_json
+        }
         response = self.insight.do_api_request(
             "/object/{}".format(self.id), method="put", json=request_body
         )
