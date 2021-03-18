@@ -30,11 +30,16 @@ class Insight:
         self.retry_session.mount("https://", adapter)
         self.retry_session.auth = self.auth
         self.retry_session.params = params
-
+        
+    @lazy
+    def object_schemas(self):
+        return self.get_object_schemas()
+    
+    def get_object_schemas(self):
         api_path = "/objectschema/list"
         object_schemas_json_request = self.do_api_request(api_path)
         object_schemas_json = object_schemas_json_request.get("objectschemas", {})
-        self.object_schemas = {}
+        object_schemas = {}
         logging.info("Loading object schemas")
         object_schemas_count = len(object_schemas_json)
         index = 1
@@ -43,10 +48,11 @@ class Insight:
                 f'Loading object schema {object_schema_json["name"]} ({index}/{object_schemas_count})'
             )
             object_schema_id = object_schema_json["id"]
-            self.object_schemas[object_schema_id] = InsightObjectSchema(
+            object_schemas[object_schema_id] = InsightObjectSchema(
                 self, object_schema_id
             )
             index += 1
+        return object_schemas
 
     def __str__(self):
         return f"Insight: {self.jira_url}"
@@ -192,24 +198,36 @@ class InsightObjectSchema:
         self.name = object_schema_json.get("name", None)
         self.key = object_schema_json.get("objectSchemaKey", None)
         self.description = object_schema_json.get("description", None)
-
+        
+    @lazy
+    def object_types(self):
+        return self.get_object_types()
+        
+    def get_object_types(self):
         object_types_json = self.insight.do_api_request(
             f"/objectschema/{self.id}/objecttypes/flat"
         )
-        self.object_types = {}
+        object_types = {}
         for object_type in object_types_json:
-            self.object_types[object_type["id"]] = InsightObjectType(
+            object_types[object_type["id"]] = InsightObjectType(
                 self.insight, object_type["id"], object_type
             )
+        return object_types
 
+    @lazy
+    def object_type_attributes(self):
+        return self.get_object_type_attributes()
+
+    def get_object_type_attributes(self):
         object_type_attributes_json = self.insight.do_api_request(
             f"/objectschema/{self.id}/attributes"
         )
-        self.object_type_attributes = {}
+        object_type_attributes = {}
         for object_type_attribute_json in object_type_attributes_json:
-            self.object_type_attributes[
+            object_type_attributes[
                 object_type_attribute_json["id"]
             ] = InsightObjectTypeAttribute(self, object_type_attribute_json)
+        return object_type_attributes
 
     def __str__(self):
         return f"InsightObjectSchema: {self.name} ({self.key})"
