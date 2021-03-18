@@ -30,7 +30,22 @@ class Insight:
         self.retry_session.mount("https://", adapter)
         self.retry_session.auth = self.auth
         self.retry_session.params = params
-        
+
+        # TODO: Find out, why the lib does not extract session cookies
+        if webbrowser_auth:
+            from urllib.parse import urlparse
+
+            url = urlparse(self.jira_url)
+            import browser_cookie3
+
+            cookies = browser_cookie3.firefox(domain_name=url.netloc)
+            self.retry_session.cookies = cookies
+
+        if jsessionid_for_testing:
+            self.retry_session.cookies = requests.cookies.cookiejar_from_dict(
+                {"JSESSIONID": jsessionid_for_testing}
+            )
+
     @lazy
     def object_schemas(self):
         return self.get_object_schemas()
