@@ -8,7 +8,14 @@ import logging
 
 
 class Insight:
-    def __init__(self, jira_url, auth, params=None):
+    def __init__(
+        self,
+        jira_url,
+        auth,
+        params=None,
+        webbrowser_auth=False,
+        jsessionid_for_testing=None,
+    ):
         retries = 3
         backoff_factor = 0.3
         status_forcelist = (500, 502, 504)
@@ -49,7 +56,7 @@ class Insight:
     @lazy
     def object_schemas(self):
         return self.get_object_schemas()
-    
+
     def get_object_schemas(self):
         api_path = "/objectschema/list"
         object_schemas_json_request = self.do_api_request(api_path)
@@ -124,12 +131,12 @@ class InsightObject:
         for attribute_id, value in attributes.items():
             entry = {
                 "objectTypeAttributeId": attribute_id,
-                "objectAttributeValues": [{"value": value}]
+                "objectAttributeValues": [{"value": value}],
             }
             attributes_json.append(entry)
         request_body = {
-            "objectTypeId": self.object_json['objectType']['id'],
-            "attributes": attributes_json
+            "objectTypeId": self.object_json["objectType"]["id"],
+            "attributes": attributes_json,
         }
         response = self.insight.do_api_request(
             "/object/{}".format(self.id), method="put", json=request_body
@@ -213,11 +220,11 @@ class InsightObjectSchema:
         self.name = object_schema_json.get("name", None)
         self.key = object_schema_json.get("objectSchemaKey", None)
         self.description = object_schema_json.get("description", None)
-        
+
     @lazy
     def object_types(self):
         return self.get_object_types()
-        
+
     def get_object_types(self):
         object_types_json = self.insight.do_api_request(
             f"/objectschema/{self.id}/objecttypes/flat"
@@ -249,7 +256,11 @@ class InsightObjectSchema:
 
     def search_iql(self, iql=None):
         api_path = "/iql/objects"
-        params = {"objectSchemaId": self.id, "resultPerPage": 500, "includeTypeAttributes": "true"}
+        params = {
+            "objectSchemaId": self.id,
+            "resultPerPage": 500,
+            "includeTypeAttributes": "true",
+        }
         if iql is not None:
             params["iql"] = iql
         search_request = self.insight.do_api_request(api_path, params=params)
@@ -331,7 +342,7 @@ class InsightObjectTypeAttribute:
                 8: "Email",
                 9: "Textarea",
                 10: "Select",
-                11: "IP Address"
+                11: "IP Address",
             },
             1: "Object",
             2: "User",
