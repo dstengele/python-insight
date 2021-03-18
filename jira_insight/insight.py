@@ -256,7 +256,7 @@ class InsightObjectSchema:
         search_results = search_request
         objects_json: list = search_results["objectEntries"]
         if not objects_json:
-            return []
+            raise StopIteration
 
         # Get additional pages if necessary
         if search_results["pageSize"] > 1:
@@ -268,12 +268,9 @@ class InsightObjectSchema:
                 page = self.insight.do_api_request(api_path, params=params)
                 objects_json += page["objectEntries"]
 
-        objects_result = []
         for json_object in objects_json:
             object_to_add = InsightObject(self.insight, json_object["id"], json_object)
-            objects_result.append(object_to_add)
-
-        return objects_result
+            yield object_to_add
 
     def object_exists(self, object_id):
         return (
