@@ -190,7 +190,7 @@ class InsightObjectAttribute:
                 "Email",
                 "Textarea",
                 "Date",
-                "DateTime",
+                "Date Time",
             ]:
                 return value_json.get("value", None)
             if self.object_type_attribute.attribute_type == "Status":
