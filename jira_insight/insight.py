@@ -189,6 +189,8 @@ class InsightObjectAttribute:
                 "URL",
                 "Email",
                 "Textarea",
+                "Date",
+                "Date Time",
             ]:
                 return value_json.get("value", None)
             if self.object_type_attribute.attribute_type == "Status":
@@ -199,14 +201,6 @@ class InsightObjectAttribute:
                 return float(value_json.get("value", None))
             if self.object_type_attribute.attribute_type == "Boolean":
                 return value_json.get("value", "false") == "true"
-            if self.object_type_attribute.attribute_type == "Date":
-                return datetime.datetime.strptime(
-                    value_json.get("value", None), "%d.%m.%Y"
-                ).date()
-            if self.object_type_attribute.attribute_type == "Date Time":
-                return datetime.datetime.strptime(
-                    value_json.get("value", None), "%d.%m.%Y %H:%M"
-                )
 
     def __str__(self):
         return f"InsightObjectAttribute: {self.name}, Value: {self.value}"
