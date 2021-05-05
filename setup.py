@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="jira_insight",
-    version="0.4.0",
+    version="0.5.0",
     author="Dennis Stengele",
     author_email="dennis@stengele.me",
     description="API client for the Insight app for Jira",
@@ -19,8 +19,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=[
-        'lazy',
-        'requests',
-    ]
+    install_requires=["lazy", "requests",],
 )
