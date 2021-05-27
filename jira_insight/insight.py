@@ -129,9 +129,13 @@ class InsightObject:
     def update_object(self, attributes: dict):
         attributes_json = []
         for attribute_id, value in attributes.items():
+            if isinstance(value, list):
+                value_list = [{"value": value_list_item} for value_list_item in value]
+            else:
+                value_list = [{"value": value}]
             entry = {
                 "objectTypeAttributeId": attribute_id,
-                "objectAttributeValues": [{"value": value}],
+                "objectAttributeValues": value_list,
             }
             attributes_json.append(entry)
         request_body = {
