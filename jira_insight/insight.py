@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import requests
 from lazy import lazy
@@ -38,15 +39,11 @@ class Insight:
         self.retry_session.auth = self.auth
         self.retry_session.params = params
 
-        # TODO: Find out, why the lib does not extract session cookies
+        # TODO: Find out why the lib does not extract session cookies
         if webbrowser_auth:
-            from urllib.parse import urlparse
-
-            url = urlparse(self.jira_url)
             import browser_cookie3
 
-            cookies = browser_cookie3.firefox(domain_name=url.netloc)
-            self.retry_session.cookies = cookies
+            self.retry_session.cookies = browser_cookie3.load()
 
         if jsessionid_for_testing:
             self.retry_session.cookies = requests.cookies.cookiejar_from_dict(
@@ -113,6 +110,7 @@ class InsightObject:
         if not self.object_json:
             self.object_json = self.insight.do_api_request(f"/object/{self.id}")
         self.name = self.object_json["label"]
+        self.objecttype_id = self.object_json["objectType"]["id"]
         self.object_schema = self.insight.object_schemas[
             self.object_json["objectType"]["objectSchemaId"]
         ]
@@ -125,6 +123,24 @@ class InsightObject:
                 attribute_json["objectAttributeValues"],
             )
             self.attributes[attribute_object.name] = attribute_object
+
+        # Long ago, Insight used to return all attributes for an object, even if they were empty. But then everything
+        # changed when the fire nation attacked.
+        # Some time ago, the API was changed to only return the attributes with values instead of returning null for
+        # empty attributes. This breaks stuff, so we extract the available attributes from the objecttype and show them
+        # with a None value.
+        object_type_attributes_json = self.insight.do_api_request(
+            f"/objecttype/{self.objecttype_id}/attributes"
+        )
+
+        for attribute_json in object_type_attributes_json:
+            attribute_id = attribute_json["id"]
+            attribute_name = attribute_json["name"]
+            if attribute_name in self.attributes.keys():
+                continue
+            self.attributes[attribute_name] = InsightObjectAttribute(
+                self, attribute_json["id"], empty=True
+            )
 
     def update_object(self, attributes: dict):
         attributes_json = []
@@ -153,17 +169,20 @@ class InsightObject:
 
 
 class InsightObjectAttribute:
-    def __init__(self, insight_object, attribute_id, values_json=None):
+    def __init__(self, insight_object, attribute_id, values_json=None, empty=False):
         self.insight_object = insight_object
         self.id = attribute_id
-        self.object_type_attribute = self.insight_object.object_schema.object_type_attributes[
-            self.id
-        ]
+        self.object_type_attribute = (
+            self.insight_object.object_schema.object_type_attributes[self.id]
+        )
         self.name = self.object_type_attribute.name
         self.values_json = values_json
+        self.empty = empty
 
     @lazy
     def value(self):
+        if self.empty:
+            return None
         if self.values_json is None:
             self.values_json = self.insight_object.object_schema.insight.do_api_request(
                 f"/objectattribute/{self.id}"
@@ -260,7 +279,7 @@ class InsightObjectSchema:
             "includeTypeAttributes": "true",
         }
         if iql is not None:
-            params["iql"] = iql
+            params["iql"] = iql.replace('"', '\\"')
         search_request = self.insight.do_api_request(api_path, params=params)
         search_results = search_request
         objects_json: list = search_results["objectEntries"]
@@ -297,6 +316,17 @@ class InsightObjectType:
             object_type_json = self.insight.do_api_request(f"/objecttype/{insight_id}")
         self.name = object_type_json.get("name", None)
         self.object_schema_id = object_type_json.get("objectSchemaId", None)
+
+    def get_object_type_attributes(self):
+        object_type_attributes_json = self.insight.do_api_request(
+            f"/objecttype/{self.id}/attributes"
+        )
+        object_type_attributes = {}
+        for object_type_attribute_json in object_type_attributes_json:
+            object_type_attributes[
+                object_type_attribute_json["id"]
+            ] = InsightObjectTypeAttribute(self, object_type_attribute_json)
+        return object_type_attributes
 
     def __str__(self):
         return f"InsightObjectType: {self.name}"
@@ -362,3 +392,11 @@ class InsightObjectTypeAttribute:
 
     def __str__(self):
         return f"InsightObjectTypeAttribute: {self.name}"
+
+
+if __name__ == "__main__":
+    # Poor man's debugging
+    insight = Insight(os.environ["INSIGHT_URL"], None, webbrowser_auth=True)
+    insight_object = InsightObject(insight, os.environ["INSIGHT_OBJECT_ID"])
+    value = insight_object.attributes["Status"].value
+    pass
