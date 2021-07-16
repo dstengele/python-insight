@@ -279,7 +279,7 @@ class InsightObjectSchema:
             "includeTypeAttributes": "true",
         }
         if iql is not None:
-            params["iql"] = iql.replace('"', '\\"')
+            params["iql"] = iql
         search_request = self.insight.do_api_request(api_path, params=params)
         search_results = search_request
         objects_json: list = search_results["objectEntries"]
