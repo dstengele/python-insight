@@ -229,6 +229,46 @@ class InsightObjectAttribute:
         return f"InsightObjectAttribute: {self.name}, Value: {self.value}"
 
 
+class IQLResult:
+    def __init__(self, insight_instance, objectschema_id, iql):
+
+        self.insight_instance = insight_instance
+        self.iql = iql
+        self.params = {
+            "objectSchemaId": objectschema_id,
+            "resultPerPage": 500,
+            "includeTypeAttributes": "true",
+        }
+        if iql is not None:
+            self.params["iql"] = iql
+
+        self.size = insight.do_api_request("/iql/objects", params=self.params).get("totalFilterCount")
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        search_request = insight.do_api_request("/iql/objects", params=self.params)
+        search_results = search_request
+        objects_json: list = search_results["objectEntries"]
+        if not objects_json:
+            raise StopIteration
+
+        # Get additional pages if necessary
+        if search_results["pageSize"] > 1:
+            for page_number in range(2, search_results["pageSize"] + 1):
+                self.params["page"] = page_number
+                logging.info(
+                    f'Reading page {page_number} of {search_results["pageSize"]}'
+                )
+                page = self.insight_instance.do_api_request("/iql/objects", params=self.params)
+                objects_json += page["objectEntries"]
+
+        for json_object in objects_json:
+            object_to_add = InsightObject(self.insight_instance, json_object["id"], json_object)
+            return object_to_add
+
+
 class InsightObjectSchema:
     def __init__(self, insight, insight_id):
         self.insight = insight
@@ -272,33 +312,7 @@ class InsightObjectSchema:
         return f"InsightObjectSchema: {self.name} ({self.key})"
 
     def search_iql(self, iql=None):
-        api_path = "/iql/objects"
-        params = {
-            "objectSchemaId": self.id,
-            "resultPerPage": 500,
-            "includeTypeAttributes": "true",
-        }
-        if iql is not None:
-            params["iql"] = iql
-        search_request = self.insight.do_api_request(api_path, params=params)
-        search_results = search_request
-        objects_json: list = search_results["objectEntries"]
-        if not objects_json:
-            raise StopIteration
-
-        # Get additional pages if necessary
-        if search_results["pageSize"] > 1:
-            for page_number in range(2, search_results["pageSize"] + 1):
-                params["page"] = page_number
-                logging.info(
-                    f'Reading page {page_number} of {search_results["pageSize"]}'
-                )
-                page = self.insight.do_api_request(api_path, params=params)
-                objects_json += page["objectEntries"]
-
-        for json_object in objects_json:
-            object_to_add = InsightObject(self.insight, json_object["id"], json_object)
-            yield object_to_add
+        return IQLResult(self.insight, self.id, iql)
 
     def object_exists(self, object_id):
         return (
@@ -397,6 +411,7 @@ class InsightObjectTypeAttribute:
 if __name__ == "__main__":
     # Poor man's debugging
     insight = Insight(os.environ["INSIGHT_URL"], None, webbrowser_auth=True)
-    insight_object = InsightObject(insight, os.environ["INSIGHT_OBJECT_ID"])
-    value = insight_object.attributes["Status"].value
+    insight_object_schema = InsightObjectSchema(insight, 12)
+    search_results = insight_object_schema.search_iql("objectType = Smartphone")
+    print(f"Results: {search_results.size}")
     pass
