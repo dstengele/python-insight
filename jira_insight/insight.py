@@ -294,11 +294,9 @@ class InsightObjectSchema:
                     f'Reading page {page_number} of {search_results["pageSize"]}'
                 )
                 page = self.insight.do_api_request(api_path, params=params)
-                objects_json += page["objectEntries"]
 
-        for json_object in objects_json:
-            object_to_add = InsightObject(self.insight, json_object["id"], json_object)
-            yield object_to_add
+                for json_object in page["objectEntries"]:
+                    yield InsightObject(self.insight, json_object["id"], json_object)
 
     def object_exists(self, object_id):
         return (
