@@ -277,26 +277,26 @@ class InsightObjectSchema:
             "objectSchemaId": self.id,
             "resultPerPage": 500,
             "includeTypeAttributes": "true",
+            "page": 1,
         }
         if iql is not None:
             params["iql"] = iql
-        search_request = self.insight.do_api_request(api_path, params=params)
-        search_results = search_request
-        objects_json: list = search_results["objectEntries"]
-        if not objects_json:
-            raise StopIteration
 
-        # Get additional pages if necessary
-        if search_results["pageSize"] > 1:
-            for page_number in range(2, search_results["pageSize"] + 1):
-                params["page"] = page_number
-                logging.info(
-                    f'Reading page {page_number} of {search_results["pageSize"]}'
-                )
-                page = self.insight.do_api_request(api_path, params=params)
+        while True:
+            search_results = self.insight.do_api_request(api_path, params=params)
+            logging.info(
+                f'Got page {params["page"]} of {search_results["pageSize"]}'
+            )
+            objects_to_check: list = search_results["objectEntries"]
 
-                for json_object in page["objectEntries"]:
-                    yield InsightObject(self.insight, json_object["id"], json_object)
+            for json_object in objects_to_check:
+                yield InsightObject(self.insight, json_object["id"], json_object)
+
+            # Get additional pages if necessary
+            if params["page"] == search_results["pageSize"]:
+                raise StopIteration
+
+            params["page"] += 1
 
     def object_exists(self, object_id):
         return (
@@ -395,6 +395,7 @@ class InsightObjectTypeAttribute:
 if __name__ == "__main__":
     # Poor man's debugging
     insight = Insight(os.environ["INSIGHT_URL"], None, webbrowser_auth=True)
-    insight_object = InsightObject(insight, os.environ["INSIGHT_OBJECT_ID"])
-    value = insight_object.attributes["Status"].value
-    pass
+    insight_object_schema = InsightObjectSchema(insight, 12)
+    object_gen = insight_object_schema.search_iql('objectType IN ("Desktop","Laptop","Tablet","Virtuelle Maschine")')
+
+    print([i for i in object_gen])
