@@ -284,6 +284,8 @@ class InsightObjectSchema:
 
         while True:
             search_results = self.insight.do_api_request(api_path, params=params)
+            if search_results["pageSize"] == 0:
+                return
             logging.info(
                 f'Got page {params["page"]} of {search_results["pageSize"]}'
             )
@@ -294,7 +296,7 @@ class InsightObjectSchema:
 
             # Get additional pages if necessary
             if params["page"] == search_results["pageSize"]:
-                raise StopIteration
+                return
 
             params["page"] += 1
 
@@ -396,6 +398,6 @@ if __name__ == "__main__":
     # Poor man's debugging
     insight = Insight(os.environ["INSIGHT_URL"], None, webbrowser_auth=True)
     insight_object_schema = InsightObjectSchema(insight, 12)
-    object_gen = insight_object_schema.search_iql('objectType IN ("Desktop","Laptop","Tablet","Virtuelle Maschine")')
+    object_gen = insight_object_schema.search_iql('objectType IN ("Desktop","Laptop","Tablet","Virtuelle Maschine") and Seriennummer = 052211303453dfgdfgdfg')
 
     print([i for i in object_gen])
