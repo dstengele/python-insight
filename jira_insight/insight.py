@@ -77,29 +77,22 @@ class Insight:
         return f"Insight: {self.jira_url}"
 
     def do_api_request(self, path, method="get", json=None, params=None):
+        path = self.insight_api_url + path
         if method == "get":
-            request = self.retry_session.get(self.insight_api_url + path, params=params)
-            request.raise_for_status()
-            return request.json()
-        if method == "post":
-            request = self.retry_session.post(
-                self.insight_api_url + path, json=json, params=params
-            )
-            request.raise_for_status()
-            return request.json()
-        if method == "put":
-            request = self.retry_session.put(
-                self.insight_api_url + path, json=json, params=params
-            )
-            request.raise_for_status()
-            return request.json()
-        if method == "head":
-            request = self.retry_session.head(
-                self.insight_api_url + path, params=params
-            )
-            request.raise_for_status()
-            return request.json()
-        raise NotImplementedError
+            request = self.retry_session.get(path, params=params)
+        elif method == "post":
+            request = self.retry_session.post(path, json=json, params=params)
+        elif method == "put":
+            request = self.retry_session.put(path, json=json, params=params)
+        elif method == "delete":
+            request = self.retry_session.delete(path, json=json, params=params)
+        elif method == "head":
+            request = self.retry_session.head(path, params=params)
+        else:
+            raise NotImplementedError
+
+        request.raise_for_status()
+        return request.json()
 
 
 class InsightObject:
