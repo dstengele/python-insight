@@ -56,6 +56,17 @@ class Insight:
             self.retry_session.auth = basic_auth
             self.auth_type = "basic"
         elif oauth_auth:
+            from requests_oauthlib import OAuth1
+            from oauthlib.oauth1 import SIGNATURE_RSA, SIGNATURE_TYPE_QUERY
+
+            self.retry_session.auth = OAuth1(
+                oauth_auth["consumer_key"],
+                rsa_key=oauth_auth["key_cert"],
+                signature_method=SIGNATURE_RSA,
+                resource_owner_key=oauth_auth["access_token"],
+                resource_owner_secret=oauth_auth["access_token_secret"],
+                signature_type=SIGNATURE_TYPE_QUERY,
+            )
             self.retry_session.auth = oauth_auth
             self.auth_type = "oauth"
         elif token_auth:
