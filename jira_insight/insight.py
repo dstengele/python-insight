@@ -1,21 +1,35 @@
-import datetime
+import logging
 import os
 
 import requests
 from lazy import lazy
 from requests.adapters import HTTPAdapter
+from requests.auth import AuthBase
 from urllib3 import Retry
-import logging
+
+
+class BearerAuth(AuthBase):
+    """Sets a Bearer token for the request."""
+
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers["Authorization"] = f"Bearer {self.token}"
+        return r
 
 
 class Insight:
     def __init__(
         self,
         jira_url,
-        auth,
+        auth=None,
         params=None,
         webbrowser_auth=False,
-        jsessionid_for_testing=None,
+        basic_auth=None,
+        oauth_auth=None,
+        token_auth=None,
+        jsessionid_auth=None,
     ):
         retries = 3
         backoff_factor = 0.3
@@ -23,7 +37,7 @@ class Insight:
         retry_session = None
         self.jira_url = jira_url
         self.insight_api_url = f"{jira_url}/rest/insight/1.0"
-        self.auth = auth
+
         # Configure retry session
         self.retry_session = retry_session or requests.Session()
         retry = Retry(
@@ -36,19 +50,36 @@ class Insight:
         adapter = HTTPAdapter(max_retries=retry)
         self.retry_session.mount("http://", adapter)
         self.retry_session.mount("https://", adapter)
-        self.retry_session.auth = self.auth
-        self.retry_session.params = params
 
-        # TODO: Find out why the lib does not extract session cookies
-        if webbrowser_auth:
+        # Auth
+        if basic_auth:
+            self.retry_session.auth = basic_auth
+            self.auth_type = "basic"
+        elif oauth_auth:
+            self.retry_session.auth = oauth_auth
+            self.auth_type = "oauth"
+        elif token_auth:
+            self.retry_session.auth = BearerAuth(token_auth)
+            self.auth_type = "token"
+        elif webbrowser_auth:
             import browser_cookie3
 
             self.retry_session.cookies = browser_cookie3.load()
-
-        if jsessionid_for_testing:
+            self.auth_type = "cookie"
+        elif jsessionid_auth:
             self.retry_session.cookies = requests.cookies.cookiejar_from_dict(
-                {"JSESSIONID": jsessionid_for_testing}
+                {"JSESSIONID": jsessionid_auth}
             )
+            self.auth_type = "jsessionid"
+        elif auth:
+            self.retry_session.auth = auth
+            logging.warning(
+                "auth parameter is deprecated. Please switch to using either basic_auth=, oauth_auth=, token_auth=, webbrowser_auth= or jsessionid_auth=."
+            )
+        else:
+            raise Exception("No auth method defined.")
+
+        self.retry_session.params = params
 
     @lazy
     def object_schemas(self):
@@ -279,9 +310,7 @@ class InsightObjectSchema:
             search_results = self.insight.do_api_request(api_path, params=params)
             if search_results["pageSize"] == 0:
                 return
-            logging.info(
-                f'Got page {params["page"]} of {search_results["pageSize"]}'
-            )
+            logging.info(f'Got page {params["page"]} of {search_results["pageSize"]}')
             objects_to_check: list = search_results["objectEntries"]
 
             for json_object in objects_to_check:
@@ -391,6 +420,8 @@ if __name__ == "__main__":
     # Poor man's debugging
     insight = Insight(os.environ["INSIGHT_URL"], None, webbrowser_auth=True)
     insight_object_schema = InsightObjectSchema(insight, 12)
-    object_gen = insight_object_schema.search_iql('objectType IN ("Desktop","Laptop","Tablet","Virtuelle Maschine") and Seriennummer = 052211303453dfgdfgdfg')
+    object_gen = insight_object_schema.search_iql(
+        'objectType IN ("Desktop","Laptop","Tablet","Virtuelle Maschine") and Seriennummer = 052211303453dfgdfgdfg'
+    )
 
     print([i for i in object_gen])
